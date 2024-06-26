@@ -5,6 +5,7 @@
 #include "EEPROM.h"
 
 // definisi verbose output yang ingin ditampilkan
+#define stepper_motor 0 // 1 stepper motor, 0 induksi motor
 #define verbose_oli 1
 #define verbose_motor 1
 #define verbose_tools 1
@@ -262,6 +263,7 @@ void gerakkan_motor()
 {
     switch (gerak_motor)
     {
+#if stepper_motor
     case 'A':
         my_stepper.setSpeed(3500);
         digitalWriteFast(digitalPinToPinName(dir_stepper), HIGH);
@@ -278,6 +280,22 @@ void gerakkan_motor()
         break;
     default:
         break;
+#else
+    case 'A':
+        digitalWriteFast(digitalPinToPinName(step_stepper), HIGH);
+        digitalWriteFast(digitalPinToPinName(dir_stepper), LOW);
+        break;
+    case 'B':
+        digitalWriteFast(digitalPinToPinName(step_stepper), LOW);
+        digitalWriteFast(digitalPinToPinName(dir_stepper), HIGH);
+        break;
+    case 'C':
+        digitalWriteFast(digitalPinToPinName(step_stepper), LOW);
+        digitalWriteFast(digitalPinToPinName(dir_stepper), LOW);
+        break;
+    default:
+        break;
+#endif
     }
 }
 
