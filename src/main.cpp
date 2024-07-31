@@ -11,6 +11,7 @@
 #define verbose_tools 1
 #define verbose_error 0
 #define verbose_perintah_pc 1
+#define verbose_mux_switch 1
 
 // pin input ATC
 #define prox_umb_maju PB9     // 0
@@ -58,6 +59,15 @@ int waktu_delay = 1;   // waktu delay tiap menit tulis ke eeprom
 int banyak_cycle = 60; // banyak segmen untuk jeda spindle mati
 int waktu_on = 5;      // Variabel untuk menyimpan nilai waktu_on
 // waktu delay = 15 waktu_on = 5, artinya waktu_on 5 detik selama 15 menit sekali
+
+// variabel untuk mux switch
+const int pin0 = 13;  // Pin untuk bit 0
+const int pin1 = 12;  // Pin untuk bit 1
+const int pin2 = 11;  // Pin untuk bit 2
+const int input = 10; // Pin untuk bit 2
+int nilai_toogle[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_input[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_input_sebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 void verbose_output()
 {
@@ -132,6 +142,15 @@ void verbose_output()
         Serial.print("|R:");
         Serial.print(perintah_pc);
     }
+
+    // verbose baca nilai mux switch
+    if (verbose_mux_switch)
+    {
+        Serial.print("|M:");
+        for (size_t i = 0; i < 8; i++)
+            Serial.print(nilai_input[i]);
+    }
+
     Serial.println(""); // enter, baris selanjutnya
 }
 
@@ -299,14 +318,52 @@ void gerakkan_motor()
     }
 }
 
+void baca_mux_switch()
+{
+    for (size_t i = 0; i < 8; i++)
+    {
+        digitalWrite(pin0, (i & 1));
+        digitalWrite(pin1, ((i >> 1) & 1));
+        digitalWrite(pin2, ((i >> 2) & 1));
+        delay(10);
+
+        // int reading;
+        nilai_input[i] = digitalRead(input);
+        // Tampilkan nilai biner pada pin output
+        // nilai_input[i] = reading;
+
+        // Update the button state
+        // if (reading != nilai_input[i])
+        // {
+        //   if (nilai_input[i] == HIGH)
+        //     nilai_toogle[i] = !nilai_toogle[i];
+        // }
+        // nilai_input_sebelumnya[i] = reading;
+
+#if defined(verbose)
+        Serial.print(" ");
+        Serial.print(i, BIN); // Tampilkan nilai biner di Serial Monitor
+        Serial.print("|");
+        Serial.print(nilai_input[i]);
+#endif
+
+        // delay(100); // Tambahkan delay 500 ms
+    }
+}
+
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     // set pin input dan output
     for (int i = 0; i < 7; i++)
         pinMode(input_pins[i], INPUT_PULLDOWN);
     for (int i = 0; i < 3; i++)
         pinMode(output_pins[i], OUTPUT);
+    // Konfigurasi pin I/O baca mux switch
+    pinMode(pin0, OUTPUT);
+    pinMode(pin1, OUTPUT);
+    pinMode(pin2, OUTPUT);
+    pinMode(input, INPUT_PULLUP);
 
     // inisialisasi oli
     init_oli();
@@ -344,6 +401,7 @@ void loop()
         newData = false;
     }
     baca_sinyal_input();
+    baca_mux_switch();
     verbose_output();
     loop_oli();
     gerakkan_motor();
