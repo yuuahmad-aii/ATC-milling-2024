@@ -5,14 +5,17 @@
 #include "EEPROM.h"
 
 // definisi verbose output yang ingin ditampilkan
-#define stepper_motor 0 // 1 stepper motor, 0 induksi motor
-#define verbose_oli 1
-#define verbose_motor 1
-#define verbose_tools 1
-#define verbose_error 0
+// #define stepper_motor 1 // 1 stepper motor, 0 induksi motor
+// #define verbose_oli 1
+// #define verbose_motor 1
+// #define verbose_tools 1
+// #define verbose_error 1
 #define verbose_perintah_pc 1
 #define verbose_mux_switch 1
+#define program_mux_switch 1
+// #define hanya_program_mux_switch 1
 
+#ifdef hanya_program_mux_switch
 // pin input ATC
 #define prox_umb_maju PB9     // 0
 #define prox_umb_mundur PB8   // 1
@@ -22,8 +25,14 @@
 #define spindle_orient_ok PB4 // 5 dari board orientasi spindle (pi5)
 #define oil_level PB3         // 6 (pi6)
 #define input_emergency PB4   // 7
+
+#ifdef program_mux_switch
+const int input_pins[7] = {prox_umb_mundur, prox_umb_mundur, prox_clamp, prox_unclamp,
+                           prox_tools, spindle_orient_ok, oil_level}; // Replace with your input pin numbers
+#else
 const int input_pins[7] = {prox_umb_maju, prox_umb_mundur, prox_clamp, prox_unclamp,
                            prox_tools, spindle_orient_ok, oil_level}; // Replace with your input pin numbers
+#endif
 
 // pin output ATC
 #define step_stepper PB14   // 4
@@ -31,11 +40,15 @@ const int input_pins[7] = {prox_umb_maju, prox_umb_mundur, prox_clamp, prox_uncl
 #define spindle_orient PC13 // 2 perintahkan spindle orient
 #define tool_clamp PC14     // 0 clamp tools
 #define move_umb PB1        // 1 aktuator maju-mundur umbrella
-// #define oil_pump PA5        // 6
+#define oil_pump PA5        // 6
 // #define buzzer PB0         // 3
+#ifdef program_mux_switch
+const int output_pins[3] = {oil_pump, oil_pump,
+                            oil_pump}; // Replace with your input pin numbers
+#else
 const int output_pins[3] = {tool_clamp, move_umb,
                             spindle_orient}; // Replace with your input pin numbers
-
+#endif
 // setup motor stepper
 AccelStepper my_stepper = AccelStepper(1, step_stepper);
 unsigned char gerak_motor = 'C'; // A=CW, B=CCW, C=STOP
@@ -61,13 +74,13 @@ int waktu_on = 5;      // Variabel untuk menyimpan nilai waktu_on
 // waktu delay = 15 waktu_on = 5, artinya waktu_on 5 detik selama 15 menit sekali
 
 // variabel untuk mux switch
-const int pin0 = 13;  // Pin untuk bit 0
-const int pin1 = 12;  // Pin untuk bit 1
-const int pin2 = 11;  // Pin untuk bit 2
-const int input = 10; // Pin untuk bit 2
+#define pin0 PC13 // Pin untuk bit 0
+#define pin1 PC14 // Pin untuk bit 1
+#define pin2 PB1  // Pin untuk bit 2
+#define input PB9 // Pin untuk bit 2
 int nilai_toogle[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-int nilai_input[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-int nilai_input_sebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_input_mux[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_input__muxsebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 void verbose_output()
 {
@@ -87,69 +100,62 @@ void verbose_output()
     if (nilai_input[5])
         Serial.print("O"); // orient ok
 
-    // untuk pergerakan motor
-    if (verbose_motor)
+// untuk pergerakan motor
+#ifdef verbose_motor
+    Serial.print("|M:");
+    switch (gerak_motor)
     {
-        Serial.print("|M:");
-        switch (gerak_motor)
-        {
-        case 'A':
-            Serial.print("A");
-            break;
-        case 'B':
-            Serial.print("B");
-            break;
-        case 'C':
-            Serial.print("C");
-            break;
-        default:
-            break;
-        }
+    case 'A':
+        Serial.print("A");
+        break;
+    case 'B':
+        Serial.print("B");
+        break;
+    case 'C':
+        Serial.print("C");
+        break;
+    default:
+        break;
     }
+#endif
 
-    // untuk tools
-    if (verbose_tools)
-    {
-        Serial.print("|P:");
-        nilai_input[4] == 1 ? Serial.print("1") : Serial.print("0");
-    }
+// untuk tools
+#ifdef verbose_tools
+    Serial.print("|P:");
+    nilai_input[4] == 1 ? Serial.print("1") : Serial.print("0");
+#endif
 
     // untuk eroor
-    if (verbose_error)
-    {
-        Serial.print("|E:");
-        Serial.print("unknown");
-    }
+#ifdef verbose_error
+    Serial.print("|E:");
+    Serial.print("unknown");
+#endif
+// untuk respon oil level
+#ifdef verbose_oli
+    Serial.print("|O:");
+    Serial.print(waktu_delay);
+    // Serial.print(",");
+    // Serial.print(get_naik_timer_ke());
+    if (get_keadaan_level_oli()) // oli habis
+        Serial.print('E');
+    if (get_keadaan_pompa_oli()) // bagaimana keadaan pompa oli
+        Serial.print('H');
+    if (get_keadaan_timer_oli_on()) // bagaimana keadaan timer oli on
+        Serial.print('M');
+#endif
 
-    // untuk respon oil level
-    if (verbose_oli)
-    {
-        Serial.print("|O:");
-        Serial.print(waktu_delay);
-        // Serial.print(",");
-        // Serial.print(get_naik_timer_ke());
-        if (get_keadaan_level_oli()) // oli habis
-            Serial.print('E');
-        if (get_keadaan_pompa_oli()) // bagaimana keadaan pompa oli
-            Serial.print('H');
-        if (get_keadaan_timer_oli_on()) // bagaimana keadaan timer oli on
-            Serial.print('M');
-    }
-
-    // verbose tulis kembali perintah pc
-    if (verbose_perintah_pc)
-    {
-        Serial.print("|R:");
-        Serial.print(perintah_pc);
-    }
+        // verbose tulis kembali perintah pc
+#ifdef verbose_perintah_pc
+    Serial.print("|R:");
+    Serial.print(perintah_pc);
+#endif
 
     // verbose baca nilai mux switch
-    if (verbose_mux_switch)
-    {
-        Serial.print("|M:");
-        for (size_t i = 0; i < 8; i++)
-            Serial.print(nilai_input[i]);
-    }
+#ifdef verbose_mux_switch
+    Serial.print("|M:");
+    for (size_t i = 0; i < 8; i++)
+        Serial.print(nilai_input_mux[i]);
+#endif
 
     Serial.println(""); // enter, baris selanjutnya
 }
@@ -282,7 +288,7 @@ void gerakkan_motor()
 {
     switch (gerak_motor)
     {
-#if stepper_motor
+#ifdef stepper_motor
     case 'A':
         my_stepper.setSpeed(3500);
         digitalWriteFast(digitalPinToPinName(dir_stepper), HIGH);
@@ -322,13 +328,13 @@ void baca_mux_switch()
 {
     for (size_t i = 0; i < 8; i++)
     {
-        digitalWrite(pin0, (i & 1));
-        digitalWrite(pin1, ((i >> 1) & 1));
-        digitalWrite(pin2, ((i >> 2) & 1));
+        digitalWriteFast(digitalPinToPinName(pin0), i & 1);
+        digitalWriteFast(digitalPinToPinName(pin1), (i >> 1) & 1);
+        digitalWriteFast(digitalPinToPinName(pin2), (i >> 2) & 1);
         delay(10);
 
         // int reading;
-        nilai_input[i] = digitalRead(input);
+        nilai_input_mux[i] = digitalReadFast(digitalPinToPinName(input));
         // Tampilkan nilai biner pada pin output
         // nilai_input[i] = reading;
 
@@ -339,16 +345,8 @@ void baca_mux_switch()
         //     nilai_toogle[i] = !nilai_toogle[i];
         // }
         // nilai_input_sebelumnya[i] = reading;
-
-#if defined(verbose)
-        Serial.print(" ");
-        Serial.print(i, BIN); // Tampilkan nilai biner di Serial Monitor
-        Serial.print("|");
-        Serial.print(nilai_input[i]);
-#endif
-
-        // delay(100); // Tambahkan delay 500 ms
     }
+    // delay(100); // Tambahkan delay 500 ms
 }
 
 void setup()
@@ -380,10 +378,12 @@ void setup()
     if (waktu_on == 0xFFFFFFFF)
         waktu_on = 5;
 
-    // pastikan in output dalam keadaan default
+// pastikan in output dalam keadaan default
+#ifndef program_mux_switch
     digitalWriteFast(digitalPinToPinName(spindle_orient), HIGH);
     digitalWriteFast(digitalPinToPinName(tool_clamp), LOW);
     digitalWriteFast(digitalPinToPinName(move_umb), LOW);
+#endif
 
     // inisialisasi stepper
     my_stepper.setMaxSpeed(5000);
@@ -407,3 +407,6 @@ void loop()
     gerakkan_motor();
     // tes_oilpump_buzzer();
 }
+#else
+
+#endif
