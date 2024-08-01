@@ -5,8 +5,9 @@
 #include "EEPROM.h"
 
 // definisi verbose output yang ingin ditampilkan
+// #define verbose_proxy 1
 // #define stepper_motor 1 // 1 stepper motor, 0 induksi motor
-// #define verbose_oli 1
+#define verbose_oli 1
 // #define verbose_motor 1
 // #define verbose_tools 1
 // #define verbose_error 1
@@ -15,7 +16,7 @@
 #define program_mux_switch 1
 // #define hanya_program_mux_switch 1
 
-#ifdef hanya_program_mux_switch
+#ifndef hanya_program_mux_switch
 // pin input ATC
 #define prox_umb_maju PB9     // 0
 #define prox_umb_mundur PB8   // 1
@@ -84,6 +85,7 @@ int nilai_input__muxsebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 void verbose_output()
 {
+#ifdef verbose_proxy
     // untuk proxy dan lainnya
     Serial.print("T:");
     // if (nilai_input[5])
@@ -99,6 +101,7 @@ void verbose_output()
         Serial.print("L"); // tool clamp
     if (nilai_input[5])
         Serial.print("O"); // orient ok
+#endif
 
 // untuk pergerakan motor
 #ifdef verbose_motor
@@ -152,7 +155,7 @@ void verbose_output()
 
     // verbose baca nilai mux switch
 #ifdef verbose_mux_switch
-    Serial.print("|M:");
+    Serial.print("|X:");
     for (size_t i = 0; i < 8; i++)
         Serial.print(nilai_input_mux[i]);
 #endif
@@ -331,7 +334,7 @@ void baca_mux_switch()
         digitalWriteFast(digitalPinToPinName(pin0), i & 1);
         digitalWriteFast(digitalPinToPinName(pin1), (i >> 1) & 1);
         digitalWriteFast(digitalPinToPinName(pin2), (i >> 2) & 1);
-        delay(10);
+        // delay(10);
 
         // int reading;
         nilai_input_mux[i] = digitalReadFast(digitalPinToPinName(input));
@@ -408,5 +411,188 @@ void loop()
     // tes_oilpump_buzzer();
 }
 #else
+#include <Arduino.h>
+
+// verbose
+#define verbose 1
+
+// simulasi ic mux switch
+// #define mux_switch 1
+
+#if defined(mux_switch)
+int nilai_input[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+bool nilai_toogle[13] = {false, false, false, false, false, false, false, false, false, false, false, false};
+int nilai_input_sebelumnya[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_debounce_input_sebelumnya[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+const int nilai_debounce = 20;
+
+// pin output digital
+#define output_1 13
+#define output_2 12
+#define output_3 11
+#define output_4 10
+#define output_5 9
+#define output_6 8
+#define output_7 7
+#define output_8 6
+#define output_mux 2
+int output_pins_digital[9] = {output_1, output_2, output_3, output_4, output_5, output_6, output_7, output_8, output_mux};
+
+// pin input digital
+#define input_mux_1 5
+#define input_mux_2 4
+#define input_mux_3 3
+#define input_1 A0
+#define input_2 A1
+#define input_3 A2
+#define input_4 A3
+#define input_5 A4
+#define input_6 A5
+int input_pins_digital[9] = {input_mux_1, input_mux_2, input_mux_3, input_1, input_2, input_3, input_4, input_5, input_6};
+// pin input analog
+#define input_7 A6
+#define input_8 A7
+int input_pins_analog[2] = {input_7, input_8};
+
+int selectorValue = 0;
+int selectorValue_sebelumnya = 0;
+
+void setup()
+{
+    for (size_t i = 0; i < 9; i++) // ada 8 buah output
+        pinMode(output_pins_digital[i], OUTPUT);
+    for (size_t i = 0; i < 2; i++) // ada 8 buah output
+        pinMode(input_pins_analog[i], INPUT);
+    for (size_t i = 0; i < 9; i++) // ada 10 buah output
+        pinMode(input_pins_digital[i], INPUT_PULLUP);
+
+// init serial
+#if defined(verbose)
+    Serial.begin(115200);
+#endif // verbose
+}
+
+void loop()
+{
+    selectorValue = 0;
+    for (int i = 0; i < 11; i++)
+    {
+        int reading;
+        if (i < 9) // tombol digital
+            reading = digitalRead(input_pins_digital[i]);
+        else // tombool analog
+        {
+            reading = analogRead(input_pins_analog[i - 9]);
+            reading < 10 ? reading = 0 : reading = 1;
+        }
+
+        // Check if the button state has changed
+        if (reading != nilai_input_sebelumnya[i])
+            nilai_debounce_input_sebelumnya[i] = millis();
+
+        // If the button state has remained the same for longer than the debounce delay
+        else if ((millis() - nilai_debounce_input_sebelumnya[i]) > nilai_debounce)
+        {
+            // Update the button state
+            if (reading != nilai_input[i])
+            {
+                nilai_input[i] = reading;
+                if (nilai_input[i] == LOW)
+                    nilai_toogle[i] = !nilai_toogle[i];
+            }
+        }
+        if (i < 3)
+            selectorValue |= (nilai_input[i] << i);
+        nilai_input_sebelumnya[i] = reading;
+    }
+
+    for (int j = 0; j < 8; j++) // tampilkan nilai input ke led
+        digitalWrite(output_pins_digital[j], !nilai_input[j + 3]);
+
+    // mux switch
+    int selectedInput = digitalRead(output_pins_digital[selectorValue]);
+    digitalWrite(output_mux, selectedInput);
+
+// tampilkan nilai
+#if defined(verbose)
+    Serial.print("inp: ");
+    for (size_t i = 0; i < 11; i++)
+        Serial.print(nilai_input[i]);
+    // Serial.print(" inps: ");
+    // for (size_t i = 0; i < 11; i++)
+    //   Serial.print(nilai_input_sebelumnya[i]);
+    Serial.print(" nil_led: ");
+    for (size_t i = 0; i < 11; i++)
+        Serial.print(nilai_toogle[i]);
+    Serial.print(" sel: ");
+    Serial.print(selectorValue);
+    Serial.println();
+#endif // verbose
+}
+#else
+// variabel untuk mux switch
+#define pin0 PC13 // Pin untuk bit 0
+#define pin1 PC14 // Pin untuk bit 1
+#define pin2 PB1  // Pin untuk bit 2
+#define input PB9 // Pin untuk bit 2
+
+int nilai_toogle[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_input[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int nilai_input_sebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+void setup()
+{
+    Serial.begin(115200); // Inisialisasi Serial Monitor pada baud rate 9600
+
+    // Konfigurasi pin sebagai output
+    pinMode(pin0, OUTPUT);
+    pinMode(pin1, OUTPUT);
+    pinMode(pin2, OUTPUT);
+    pinMode(input, INPUT_PULLUP);
+}
+
+void loop()
+{
+    for (size_t i = 0; i < 8; i++)
+    {
+        digitalWriteFast(digitalPinToPinName(pin0), (i & 1));
+        digitalWriteFast(digitalPinToPinName(pin1), ((i >> 1) & 1));
+        digitalWriteFast(digitalPinToPinName(pin2), ((i >> 2) & 1));
+        delay(10);
+
+        // int reading;
+        nilai_input[i] = digitalReadFast(digitalPinToPinName(input));
+        // Tampilkan nilai biner pada pin output
+        // nilai_input[i] = reading;
+
+        // Update the button state
+        // if (reading != nilai_input[i])
+        // {
+        //   if (nilai_input[i] == HIGH)
+        //     nilai_toogle[i] = !nilai_toogle[i];
+        // }
+        // nilai_input_sebelumnya[i] = reading;
+
+#if defined(verbose)
+        Serial.print(" ");
+        // Serial.print(i, BIN); // Tampilkan nilai biner di Serial Monitor
+        // Serial.print("|");
+        Serial.print(nilai_input[i]);
+#endif
+
+        // delay(100); // Tambahkan delay 500 ms
+    }
+
+#if defined(verbose)
+    // Serial.print(" input: ");
+    // for (size_t i = 0; i < 8; i++)
+    //   Serial.print(nilai_input[i]);
+    // Serial.print(" toogle: ");
+    // for (size_t i = 0; i < 8; i++)
+    //   Serial.print(nilai_toogle[i]);
+    Serial.println();
+#endif
+}
+#endif // mux_switch
 
 #endif
