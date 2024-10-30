@@ -5,54 +5,104 @@
 #include "EEPROM.h"
 
 // definisi verbose output yang ingin ditampilkan
-// #define VERBOSE_PROXY 1
+#define VERBOSE_PROXY 1
 // #define STEPPER_MOTOR 1 // 1 stepper motor, 0 induksi motor
-#define VERBOSE_OLI 1
-// #define VERBOSE_MOTOR 1
-// #define VERBOSE_TOOLS 1
+// #define VERBOSE_OLI 1
+#define VERBOSE_MOTOR 1
+#define VERBOSE_TOOLS 1
 // #define VERBOSE_ERROR 1
 #define VERBOSE_PERINTAH_PC 1
-#define VERBOSE_MUX_SWITCH 1
-#define PROGRAM_MUX_SWITCH 1
+// #define VERBOSE_MUX_SWITCH 1
+// #define PROGRAM_MUX_SWITCH 1
 // #define HANYA_PROGRAM_MUX_SWITCH 1
+#define CILEUNGSI 1
 
 #ifndef HANYA_PROGRAM_MUX_SWITCH
 // pin input ATC
+#ifdef CILEUNGSI
+#define PROX_UMB_MAJU PA0     // 0
+#define PROX_UMB_MUNDUR PA1   // 1
+#define PROX_CLAMP PA2        // 2
+#define PROX_UNCLAMP PA3      // 3
+#define PROX_TOOLS PA4        // 4
+#define SPINDLE_ORIENT_OK PA6 // 5
+// #define OIL_LEVEL PB3         // 6
+// #define INPUT_EMERGENCY PB4   // 7
+#else
 #define PROX_UMB_MAJU PB9     // 0
 #define PROX_UMB_MUNDUR PB8   // 1
 #define PROX_CLAMP PA8        // 2
 #define PROX_UNCLAMP PB10     // 3
 #define PROX_TOOLS PB5        // 4
-#define SPINDLE_ORIENT_OK PB4 // 5 dari board orientasi spindle (pi5)
-#define OIL_LEVEL PB3         // 6 (pi6)
-#define INPUT_EMERGENCY PB4   // 7
+#define SPINDLE_ORIENT_OK PB4 // 5
+// #define OIL_LEVEL PB3         // 6
+// #define INPUT_EMERGENCY PB4   // 7
+#endif
 
 #ifdef PROGRAM_MUX_SWITCH
-const int input_pins[7] = {PROX_UMB_MUNDUR, PROX_UMB_MUNDUR, PROX_CLAMP, PROX_UNCLAMP,
-                           PROX_TOOLS, SPINDLE_ORIENT_OK, OIL_LEVEL}; // Replace with your input pin numbers
+const int input_pins[6] = {
+    PROX_UMB_MUNDUR,
+    PROX_UMB_MUNDUR,
+    PROX_CLAMP,
+    PROX_UNCLAMP,
+    PROX_TOOLS,
+    SPINDLE_ORIENT_OK,
+    OIL_LEVEL}; // Replace with your input pin numbers
 #else
-const int input_pins[7] = {PROX_UMB_MAJU, PROX_UMB_MUNDUR, PROX_CLAMP, PROX_UNCLAMP,
-                           PROX_TOOLS, SPINDLE_ORIENT_OK, OIL_LEVEL}; // Replace with your input pin numbers
+const int input_pins[6] = {
+    PROX_UMB_MAJU,
+    PROX_UMB_MUNDUR,
+    PROX_CLAMP,
+    PROX_UNCLAMP,
+    PROX_TOOLS,
+    SPINDLE_ORIENT_OK}; // Replace with your input pin numbers
 #endif
 
 // pin output ATC
-#define STEP_STEPPER PB14   // 4
-#define DIR_STEPPER PA15    // 5
-#define SPINDLE_ORIENT PC13 // 2 perintahkan spindle orient
-#define TOOL_CLAMP PC14     // 0 clamp tools
-#define MOVE_UMB PB1        // 1 aktuator maju-mundur umbrella
-#define OIL_PUMP PA5        // 6
-// #define BUZZER PB0         // 3
-#ifdef PROGRAM_MUX_SWITCH
-const int output_pins[3] = {OIL_PUMP, OIL_PUMP,
-                            OIL_PUMP}; // Replace with your input pin numbers
+#ifdef CILEUNGSI
+#define STEP_STEPPER PB4   // 0
+#define DIR_STEPPER PB5    // 1
+#define MOVE_UMB PB6       // 4
+#define TOOL_CLAMP PB7     // 3
+#define SPINDLE_ORIENT PB8 // 2
+// #define OIL_PUMP PA5     // 5
+// #define BUZZER PB0       // 6
 #else
-const int output_pins[3] = {TOOL_CLAMP, MOVE_UMB,
-                            SPINDLE_ORIENT}; // Replace with your input pin numbers
+#define STEP_STEPPER PB14   // 0
+#define DIR_STEPPER PA15    // 1
+#define SPINDLE_ORIENT PC13 // 2
+#define TOOL_CLAMP PC14     // 3
+#define MOVE_UMB PB1        // 4
+// #define OIL_PUMP PA5     // 5
+// #define BUZZER PB0       // 6
 #endif
-// setup motor stepper
-AccelStepper my_stepper = AccelStepper(1, STEP_STEPPER);
+#ifdef PROGRAM_MUX_SWITCH
+const int output_pins[3] = {
+    OIL_PUMP,
+    OIL_PUMP,
+    OIL_PUMP}; // Replace with your input pin numbers
+#else
+#ifdef CILEUNGSI
+const int output_pins[5] = {
+    STEP_STEPPER,
+    DIR_STEPPER,
+    SPINDLE_ORIENT,
+    TOOL_CLAMP,
+    MOVE_UMB,
+}; // Replace with your input pin numbers
+#else
+const int output_pins[3] = {
+    TOOL_CLAMP,
+    MOVE_UMB,
+    SPINDLE_ORIENT}; // Replace with your input pin numbers
+#endif
+#endif
+
+// setup motor stepper dan motor induksi
 unsigned char gerak_motor = 'C'; // A=CW, B=CCW, C=STOP
+#ifdef STEPPER_MOTOR
+AccelStepper my_stepper = AccelStepper(1, STEP_STEPPER);
+#endif
 
 // variabel untuk memproses nilai input
 bool nilai_input[] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -88,17 +138,14 @@ void verbose_output()
 #ifdef VERBOSE_PROXY
     // untuk proxy dan lainnya
     Serial.print("T:");
-    // if (nilai_input[5])
-    //     Serial.print("O"); // spindle orientation ok
-    // ok hanya ketika nilai_input[5] benar lalu low kembali
     if (nilai_input[0])
         Serial.print("F"); // umbrella didepan
-    if (nilai_input[3])
-        Serial.print("U"); // tool unclamp
     if (nilai_input[1])
         Serial.print("B"); // umbrella dibelakang
     if (nilai_input[2])
         Serial.print("L"); // tool clamp
+    if (nilai_input[3])
+        Serial.print("U"); // tool unclamp
     if (nilai_input[5])
         Serial.print("O"); // orient ok
 #endif
@@ -389,10 +436,12 @@ void setup()
 #endif
 
     // inisialisasi stepper
+#ifdef STEPPER_MOTOR
     my_stepper.setMaxSpeed(5000);
     my_stepper.setPinsInverted(false, false);
     my_stepper.stop();
     my_stepper.setCurrentPosition(0);
+#endif
 }
 
 void loop()
@@ -404,7 +453,9 @@ void loop()
         newData = false;
     }
     baca_sinyal_input();
+#ifdef HANYA_PROGRAM_MUX_SWITCH
     baca_mux_switch();
+#endif
     verbose_output();
     loop_oli();
     gerakkan_motor();
