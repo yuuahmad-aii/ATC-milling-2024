@@ -105,8 +105,8 @@ AccelStepper my_stepper = AccelStepper(1, STEP_STEPPER);
 #endif
 
 // variabel untuk memproses nilai input
-bool nilai_input[] = {0, 0, 0, 0, 0, 0, 0, 0};
-bool last_nilai_input[] = {0, 0, 0, 0, 0, 0, 0, 0};
+bool nilai_input[] = {0, 0, 0, 0, 0, 0};
+bool last_nilai_input[] = {0, 0, 0, 0, 0, 0};
 unsigned int bounce = 10;
 bool status;
 unsigned long lastDebounceTimes[8];
@@ -125,6 +125,7 @@ int waktu_on = 5;      // Variabel untuk menyimpan nilai waktu_on
 // waktu delay = 15 waktu_on = 5, artinya waktu_on 5 detik selama 15 menit sekali
 
 // variabel untuk mux switch
+#ifdef PROGRAM_MUX_SWITCH
 #define PIN0 PC13 // Pin untuk bit 0
 #define PIN1 PC14 // Pin untuk bit 1
 #define PIN2 PB1  // Pin untuk bit 2
@@ -132,21 +133,22 @@ int waktu_on = 5;      // Variabel untuk menyimpan nilai waktu_on
 int nilai_toogle[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int nilai_input_mux[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int nilai_input__muxsebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+#endif
 
 void verbose_output()
 {
 #ifdef VERBOSE_PROXY
     // untuk proxy dan lainnya
     Serial.print("T:");
-    if (nilai_input[0])
+    if (!nilai_input[0])
         Serial.print("F"); // umbrella didepan
-    if (nilai_input[1])
+    if (!nilai_input[1])
         Serial.print("B"); // umbrella dibelakang
-    if (nilai_input[2])
+    if (!nilai_input[2])
         Serial.print("L"); // tool clamp
-    if (nilai_input[3])
+    if (!nilai_input[3])
         Serial.print("U"); // tool unclamp
-    if (nilai_input[5])
+    if (!nilai_input[5])
         Serial.print("O"); // orient ok
 #endif
 
@@ -267,13 +269,13 @@ void parsing_perintah_pc()
         perintah_pc = 'P';
         digitalWriteFast(digitalPinToPinName(MOVE_UMB), HIGH); // relay aktif high
         break;
-    case 'U':
-        perintah_pc = 'U';
-        digitalWriteFast(digitalPinToPinName(TOOL_CLAMP), HIGH); // relay aktif high
-        break;
     case 'K':
         perintah_pc = 'K';
         digitalWriteFast(digitalPinToPinName(MOVE_UMB), LOW);
+        break;
+    case 'U':
+        perintah_pc = 'U';
+        digitalWriteFast(digitalPinToPinName(TOOL_CLAMP), HIGH); // relay aktif high
         break;
     case 'L':
         perintah_pc = 'L';
@@ -320,7 +322,7 @@ void parsing_perintah_pc()
 void baca_sinyal_input()
 {
     // baca status pin input, kemudian kirim data ke PC
-    for (int i = 0; i < 7; i++)
+    for (int i = 0; i < 6; i++)
     {
         int reading = !digitalReadFast(digitalPinToPinName(input_pins[i]));
         // karena logicnya terbalik
@@ -374,6 +376,7 @@ void gerakkan_motor()
     }
 }
 
+#ifdef PROGRAM_MUX_SWITCH
 void baca_mux_switch()
 {
     for (size_t i = 0; i < 8; i++)
@@ -398,20 +401,23 @@ void baca_mux_switch()
     }
     // delay(100); // Tambahkan delay 500 ms
 }
+#endif
 
 void setup()
 {
     Serial.begin(115200);
     // set pin input dan output
-    for (int i = 0; i < 7; i++)
-        pinMode(input_pins[i], INPUT_PULLDOWN);
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 6; i++)
+        pinMode(input_pins[i], INPUT);
+    for (int i = 0; i < 5; i++)
         pinMode(output_pins[i], OUTPUT);
-    // Konfigurasi pin I/O baca mux switch
+        // Konfigurasi pin I/O baca mux switch
+#ifdef PROGRAM_MUX_SWITCH
     pinMode(PIN0, OUTPUT);
     pinMode(PIN1, OUTPUT);
     pinMode(PIN2, OUTPUT);
     pinMode(INPUT, INPUT_PULLUP);
+#endif
 
     // inisialisasi oli
     init_oli();
@@ -428,12 +434,10 @@ void setup()
     if (waktu_on == 0xFFFFFFFF)
         waktu_on = 5;
 
-// pastikan in output dalam keadaan default
-#ifndef program_mux_switch
+    // pastikan in output dalam keadaan default
     digitalWriteFast(digitalPinToPinName(SPINDLE_ORIENT), HIGH);
     digitalWriteFast(digitalPinToPinName(TOOL_CLAMP), LOW);
     digitalWriteFast(digitalPinToPinName(MOVE_UMB), LOW);
-#endif
 
     // inisialisasi stepper
 #ifdef STEPPER_MOTOR
