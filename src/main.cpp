@@ -25,7 +25,7 @@
 #define PROX_CLAMP PA2        // 2
 #define PROX_UNCLAMP PA3      // 3
 #define PROX_TOOLS PA4        // 4
-#define SPINDLE_ORIENT_OK PA6 // 5
+#define SPINDLE_ORIENT_OK PA9 // 5
 // #define OIL_LEVEL PB3         // 6
 // #define INPUT_EMERGENCY PB4   // 7
 #else
