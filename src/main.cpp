@@ -5,53 +5,53 @@
 #include "EEPROM.h"
 
 // definisi verbose output yang ingin ditampilkan
-// #define verbose_proxy 1
-// #define stepper_motor 1 // 1 stepper motor, 0 induksi motor
-#define verbose_oli 1
-// #define verbose_motor 1
-// #define verbose_tools 1
-// #define verbose_error 1
-#define verbose_perintah_pc 1
-#define verbose_mux_switch 1
-#define program_mux_switch 1
-// #define hanya_program_mux_switch 1
+// #define VERBOSE_PROXY 1
+// #define STEPPER_MOTOR 1 // 1 stepper motor, 0 induksi motor
+#define VERBOSE_OLI 1
+// #define VERBOSE_MOTOR 1
+// #define VERBOSE_TOOLS 1
+// #define VERBOSE_ERROR 1
+#define VERBOSE_PERINTAH_PC 1
+#define VERBOSE_MUX_SWITCH 1
+#define PROGRAM_MUX_SWITCH 1
+// #define HANYA_PROGRAM_MUX_SWITCH 1
 
-#ifndef hanya_program_mux_switch
+#ifndef HANYA_PROGRAM_MUX_SWITCH
 // pin input ATC
-#define prox_umb_maju PB9     // 0
-#define prox_umb_mundur PB8   // 1
-#define prox_clamp PA8        // 2
-#define prox_unclamp PB10     // 3
-#define prox_tools PB5        // 4
-#define spindle_orient_ok PB4 // 5 dari board orientasi spindle (pi5)
-#define oil_level PB3         // 6 (pi6)
-#define input_emergency PB4   // 7
+#define PROX_UMB_MAJU PB9     // 0
+#define PROX_UMB_MUNDUR PB8   // 1
+#define PROX_CLAMP PA8        // 2
+#define PROX_UNCLAMP PB10     // 3
+#define PROX_TOOLS PB5        // 4
+#define SPINDLE_ORIENT_OK PB4 // 5 dari board orientasi spindle (pi5)
+#define OIL_LEVEL PB3         // 6 (pi6)
+#define INPUT_EMERGENCY PB4   // 7
 
-#ifdef program_mux_switch
-const int input_pins[7] = {prox_umb_mundur, prox_umb_mundur, prox_clamp, prox_unclamp,
-                           prox_tools, spindle_orient_ok, oil_level}; // Replace with your input pin numbers
+#ifdef PROGRAM_MUX_SWITCH
+const int input_pins[7] = {PROX_UMB_MUNDUR, PROX_UMB_MUNDUR, PROX_CLAMP, PROX_UNCLAMP,
+                           PROX_TOOLS, SPINDLE_ORIENT_OK, OIL_LEVEL}; // Replace with your input pin numbers
 #else
-const int input_pins[7] = {prox_umb_maju, prox_umb_mundur, prox_clamp, prox_unclamp,
-                           prox_tools, spindle_orient_ok, oil_level}; // Replace with your input pin numbers
+const int input_pins[7] = {PROX_UMB_MAJU, PROX_UMB_MUNDUR, PROX_CLAMP, PROX_UNCLAMP,
+                           PROX_TOOLS, SPINDLE_ORIENT_OK, OIL_LEVEL}; // Replace with your input pin numbers
 #endif
 
 // pin output ATC
-#define step_stepper PB14   // 4
-#define dir_stepper PA15    // 5
-#define spindle_orient PC13 // 2 perintahkan spindle orient
-#define tool_clamp PC14     // 0 clamp tools
-#define move_umb PB1        // 1 aktuator maju-mundur umbrella
-#define oil_pump PA5        // 6
-// #define buzzer PB0         // 3
-#ifdef program_mux_switch
-const int output_pins[3] = {oil_pump, oil_pump,
-                            oil_pump}; // Replace with your input pin numbers
+#define STEP_STEPPER PB14   // 4
+#define DIR_STEPPER PA15    // 5
+#define SPINDLE_ORIENT PC13 // 2 perintahkan spindle orient
+#define TOOL_CLAMP PC14     // 0 clamp tools
+#define MOVE_UMB PB1        // 1 aktuator maju-mundur umbrella
+#define OIL_PUMP PA5        // 6
+// #define BUZZER PB0         // 3
+#ifdef PROGRAM_MUX_SWITCH
+const int output_pins[3] = {OIL_PUMP, OIL_PUMP,
+                            OIL_PUMP}; // Replace with your input pin numbers
 #else
-const int output_pins[3] = {tool_clamp, move_umb,
-                            spindle_orient}; // Replace with your input pin numbers
+const int output_pins[3] = {TOOL_CLAMP, MOVE_UMB,
+                            SPINDLE_ORIENT}; // Replace with your input pin numbers
 #endif
 // setup motor stepper
-AccelStepper my_stepper = AccelStepper(1, step_stepper);
+AccelStepper my_stepper = AccelStepper(1, STEP_STEPPER);
 unsigned char gerak_motor = 'C'; // A=CW, B=CCW, C=STOP
 
 // variabel untuk memproses nilai input
@@ -75,17 +75,17 @@ int waktu_on = 5;      // Variabel untuk menyimpan nilai waktu_on
 // waktu delay = 15 waktu_on = 5, artinya waktu_on 5 detik selama 15 menit sekali
 
 // variabel untuk mux switch
-#define pin0 PC13 // Pin untuk bit 0
-#define pin1 PC14 // Pin untuk bit 1
-#define pin2 PB1  // Pin untuk bit 2
-#define input PB9 // Pin untuk bit 2
+#define PIN0 PC13 // Pin untuk bit 0
+#define PIN1 PC14 // Pin untuk bit 1
+#define PIN2 PB1  // Pin untuk bit 2
+#define INPUT PB9 // Pin untuk bit 2
 int nilai_toogle[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int nilai_input_mux[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int nilai_input__muxsebelumnya[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 void verbose_output()
 {
-#ifdef verbose_proxy
+#ifdef VERBOSE_PROXY
     // untuk proxy dan lainnya
     Serial.print("T:");
     // if (nilai_input[5])
@@ -104,7 +104,7 @@ void verbose_output()
 #endif
 
 // untuk pergerakan motor
-#ifdef verbose_motor
+#ifdef VERBOSE_MOTOR
     Serial.print("|M:");
     switch (gerak_motor)
     {
@@ -123,18 +123,18 @@ void verbose_output()
 #endif
 
 // untuk tools
-#ifdef verbose_tools
+#ifdef VERBOSE_TOOLS
     Serial.print("|P:");
     nilai_input[4] == 1 ? Serial.print("1") : Serial.print("0");
 #endif
 
     // untuk eroor
-#ifdef verbose_error
+#ifdef VERBOSE_ERROR
     Serial.print("|E:");
     Serial.print("unknown");
 #endif
 // untuk respon oil level
-#ifdef verbose_oli
+#ifdef VERBOSE_OLI
     Serial.print("|O:");
     Serial.print(waktu_delay);
     // Serial.print(",");
@@ -148,13 +148,13 @@ void verbose_output()
 #endif
 
         // verbose tulis kembali perintah pc
-#ifdef verbose_perintah_pc
+#ifdef VERBOSE_PERINTAH_PC
     Serial.print("|R:");
     Serial.print(perintah_pc);
 #endif
 
     // verbose baca nilai mux switch
-#ifdef verbose_mux_switch
+#ifdef VERBOSE_MUX_SWITCH
     Serial.print("|X:");
     for (size_t i = 0; i < 8; i++)
         Serial.print(nilai_input_mux[i]);
@@ -210,27 +210,27 @@ void parsing_perintah_pc()
         // Umbrella goes backward (K) (T:B) (Err:B)
     case 'H':
         perintah_pc = 'H';
-        digitalWriteFast(digitalPinToPinName(spindle_orient), LOW); // spindle orient aktif low
+        digitalWriteFast(digitalPinToPinName(SPINDLE_ORIENT), LOW); // spindle orient aktif low
         break;
     case 'J':
         perintah_pc = 'J';
-        digitalWriteFast(digitalPinToPinName(spindle_orient), HIGH);
+        digitalWriteFast(digitalPinToPinName(SPINDLE_ORIENT), HIGH);
         break;
     case 'P':
         perintah_pc = 'P';
-        digitalWriteFast(digitalPinToPinName(move_umb), HIGH); // relay aktif high
+        digitalWriteFast(digitalPinToPinName(MOVE_UMB), HIGH); // relay aktif high
         break;
     case 'U':
         perintah_pc = 'U';
-        digitalWriteFast(digitalPinToPinName(tool_clamp), HIGH); // relay aktif high
+        digitalWriteFast(digitalPinToPinName(TOOL_CLAMP), HIGH); // relay aktif high
         break;
     case 'K':
         perintah_pc = 'K';
-        digitalWriteFast(digitalPinToPinName(move_umb), LOW);
+        digitalWriteFast(digitalPinToPinName(MOVE_UMB), LOW);
         break;
     case 'L':
         perintah_pc = 'L';
-        digitalWriteFast(digitalPinToPinName(tool_clamp), LOW);
+        digitalWriteFast(digitalPinToPinName(TOOL_CLAMP), LOW);
         break;
     default:
         break;
@@ -291,15 +291,15 @@ void gerakkan_motor()
 {
     switch (gerak_motor)
     {
-#ifdef stepper_motor
+#ifdef STEPPER_MOTOR
     case 'A':
         my_stepper.setSpeed(3500);
-        digitalWriteFast(digitalPinToPinName(dir_stepper), HIGH);
+        digitalWriteFast(digitalPinToPinName(DIR_STEPPER), HIGH);
         my_stepper.runSpeed();
         break;
     case 'B':
         my_stepper.setSpeed(3500);
-        digitalWriteFast(digitalPinToPinName(dir_stepper), LOW);
+        digitalWriteFast(digitalPinToPinName(DIR_STEPPER), LOW);
         my_stepper.runSpeed();
         break;
     case 'C':
@@ -310,16 +310,16 @@ void gerakkan_motor()
         break;
 #else
     case 'A':
-        digitalWriteFast(digitalPinToPinName(step_stepper), HIGH);
-        digitalWriteFast(digitalPinToPinName(dir_stepper), LOW);
+        digitalWriteFast(digitalPinToPinName(STEP_STEPPER), HIGH);
+        digitalWriteFast(digitalPinToPinName(DIR_STEPPER), LOW);
         break;
     case 'B':
-        digitalWriteFast(digitalPinToPinName(step_stepper), LOW);
-        digitalWriteFast(digitalPinToPinName(dir_stepper), HIGH);
+        digitalWriteFast(digitalPinToPinName(STEP_STEPPER), LOW);
+        digitalWriteFast(digitalPinToPinName(DIR_STEPPER), HIGH);
         break;
     case 'C':
-        digitalWriteFast(digitalPinToPinName(step_stepper), LOW);
-        digitalWriteFast(digitalPinToPinName(dir_stepper), LOW);
+        digitalWriteFast(digitalPinToPinName(STEP_STEPPER), LOW);
+        digitalWriteFast(digitalPinToPinName(DIR_STEPPER), LOW);
         break;
     default:
         break;
@@ -331,13 +331,13 @@ void baca_mux_switch()
 {
     for (size_t i = 0; i < 8; i++)
     {
-        digitalWriteFast(digitalPinToPinName(pin0), i & 1);
-        digitalWriteFast(digitalPinToPinName(pin1), (i >> 1) & 1);
-        digitalWriteFast(digitalPinToPinName(pin2), (i >> 2) & 1);
+        digitalWriteFast(digitalPinToPinName(PIN0), i & 1);
+        digitalWriteFast(digitalPinToPinName(PIN1), (i >> 1) & 1);
+        digitalWriteFast(digitalPinToPinName(PIN2), (i >> 2) & 1);
         // delay(10);
 
         // int reading;
-        nilai_input_mux[i] = digitalReadFast(digitalPinToPinName(input));
+        nilai_input_mux[i] = digitalReadFast(digitalPinToPinName(INPUT));
         // Tampilkan nilai biner pada pin output
         // nilai_input[i] = reading;
 
@@ -361,10 +361,10 @@ void setup()
     for (int i = 0; i < 3; i++)
         pinMode(output_pins[i], OUTPUT);
     // Konfigurasi pin I/O baca mux switch
-    pinMode(pin0, OUTPUT);
-    pinMode(pin1, OUTPUT);
-    pinMode(pin2, OUTPUT);
-    pinMode(input, INPUT_PULLUP);
+    pinMode(PIN0, OUTPUT);
+    pinMode(PIN1, OUTPUT);
+    pinMode(PIN2, OUTPUT);
+    pinMode(INPUT, INPUT_PULLUP);
 
     // inisialisasi oli
     init_oli();
@@ -383,9 +383,9 @@ void setup()
 
 // pastikan in output dalam keadaan default
 #ifndef program_mux_switch
-    digitalWriteFast(digitalPinToPinName(spindle_orient), HIGH);
-    digitalWriteFast(digitalPinToPinName(tool_clamp), LOW);
-    digitalWriteFast(digitalPinToPinName(move_umb), LOW);
+    digitalWriteFast(digitalPinToPinName(SPINDLE_ORIENT), HIGH);
+    digitalWriteFast(digitalPinToPinName(TOOL_CLAMP), LOW);
+    digitalWriteFast(digitalPinToPinName(MOVE_UMB), LOW);
 #endif
 
     // inisialisasi stepper
@@ -414,12 +414,12 @@ void loop()
 #include <Arduino.h>
 
 // verbose
-#define verbose 1
+#define VERBOSE 1
 
 // simulasi ic mux switch
-// #define mux_switch 1
+// #define MUX_SWITCH 1
 
-#if defined(mux_switch)
+#if defineD(mux_switch)
 int nilai_input[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 bool nilai_toogle[13] = {false, false, false, false, false, false, false, false, false, false, false, false};
 int nilai_input_sebelumnya[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -427,31 +427,31 @@ int nilai_debounce_input_sebelumnya[13] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 const int nilai_debounce = 20;
 
 // pin output digital
-#define output_1 13
-#define output_2 12
-#define output_3 11
-#define output_4 10
-#define output_5 9
-#define output_6 8
-#define output_7 7
-#define output_8 6
-#define output_mux 2
+#define OUTPUT_1 13
+#define OUTPUT_2 12
+#define OUTPUT_3 11
+#define OUTPUT_4 10
+#define OUTPUT_5 9
+#define OUTPUT_6 8
+#define OUTPUT_7 7
+#define OUTPUT_8 6
+#define OUTPUT_MUX 2
 int output_pins_digital[9] = {output_1, output_2, output_3, output_4, output_5, output_6, output_7, output_8, output_mux};
 
 // pin input digital
-#define input_mux_1 5
-#define input_mux_2 4
-#define input_mux_3 3
-#define input_1 A0
-#define input_2 A1
-#define input_3 A2
-#define input_4 A3
-#define input_5 A4
-#define input_6 A5
+#define INPUT_MUX_1 5
+#define INPUT_MUX_2 4
+#define INPUT_MUX_3 3
+#define INPUT_1 A0
+#define INPUT_2 A1
+#define INPUT_3 A2
+#define INPUT_4 A3
+#define INPUT_5 A4
+#define INPUT_6 A5
 int input_pins_digital[9] = {input_mux_1, input_mux_2, input_mux_3, input_1, input_2, input_3, input_4, input_5, input_6};
 // pin input analog
-#define input_7 A6
-#define input_8 A7
+#define INPUT_7 A6
+#define INPUT_8 A7
 int input_pins_analog[2] = {input_7, input_8};
 
 int selectorValue = 0;
@@ -467,7 +467,7 @@ void setup()
         pinMode(input_pins_digital[i], INPUT_PULLUP);
 
 // init serial
-#if defined(verbose)
+#if defineD(verbose)
     Serial.begin(115200);
 #endif // verbose
 }
@@ -514,7 +514,7 @@ void loop()
     digitalWrite(output_mux, selectedInput);
 
 // tampilkan nilai
-#if defined(verbose)
+#if defineD(verbose)
     Serial.print("inp: ");
     for (size_t i = 0; i < 11; i++)
         Serial.print(nilai_input[i]);
@@ -531,10 +531,10 @@ void loop()
 }
 #else
 // variabel untuk mux switch
-#define pin0 PC13 // Pin untuk bit 0
-#define pin1 PC14 // Pin untuk bit 1
-#define pin2 PB1  // Pin untuk bit 2
-#define input PB9 // Pin untuk bit 2
+#define PIN0 PC13 // Pin untuk bit 0
+#define PIN1 PC14 // Pin untuk bit 1
+#define PIN2 PB1  // Pin untuk bit 2
+#define INPUT PB9 // Pin untuk bit 2
 
 int nilai_toogle[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int nilai_input[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -545,9 +545,9 @@ void setup()
     Serial.begin(115200); // Inisialisasi Serial Monitor pada baud rate 9600
 
     // Konfigurasi pin sebagai output
-    pinMode(pin0, OUTPUT);
-    pinMode(pin1, OUTPUT);
-    pinMode(pin2, OUTPUT);
+    pinMode(PIN0, OUTPUT);
+    pinMode(PIN1, OUTPUT);
+    pinMode(PIN2, OUTPUT);
     pinMode(input, INPUT_PULLUP);
 }
 
@@ -555,9 +555,9 @@ void loop()
 {
     for (size_t i = 0; i < 8; i++)
     {
-        digitalWriteFast(digitalPinToPinName(pin0), (i & 1));
-        digitalWriteFast(digitalPinToPinName(pin1), ((i >> 1) & 1));
-        digitalWriteFast(digitalPinToPinName(pin2), ((i >> 2) & 1));
+        digitalWriteFast(digitalPinToPinName(PIN0), (i & 1));
+        digitalWriteFast(digitalPinToPinName(PIN1), ((i >> 1) & 1));
+        digitalWriteFast(digitalPinToPinName(PIN2), ((i >> 2) & 1));
         delay(10);
 
         // int reading;
@@ -573,7 +573,7 @@ void loop()
         // }
         // nilai_input_sebelumnya[i] = reading;
 
-#if defined(verbose)
+#if defineD(verbose)
         Serial.print(" ");
         // Serial.print(i, BIN); // Tampilkan nilai biner di Serial Monitor
         // Serial.print("|");
@@ -583,7 +583,7 @@ void loop()
         // delay(100); // Tambahkan delay 500 ms
     }
 
-#if defined(verbose)
+#if defineD(verbose)
     // Serial.print(" input: ");
     // for (size_t i = 0; i < 8; i++)
     //   Serial.print(nilai_input[i]);
