@@ -3,8 +3,8 @@
 
 // pinout oil lubricants
 #define pompa_oli PA5
-#define timer_oli_on PA6 // dari m3 
-#define sensor_oli PA7
+#define timer_oli_on PB3 // dari m3
+#define sensor_oli PB14
 #define buzzer PB0
 
 void init_oli();

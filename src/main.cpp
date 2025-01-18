@@ -7,7 +7,7 @@
 // definisi verbose output yang ingin ditampilkan
 #define VERBOSE_PROXY 1
 // #define STEPPER_MOTOR 1 // 1 stepper motor, 0 induksi motor
-// #define VERBOSE_OLI 1
+#define VERBOSE_OLI 1
 #define VERBOSE_MOTOR 1
 #define VERBOSE_TOOLS 1
 // #define VERBOSE_ERROR 1
@@ -20,11 +20,11 @@
 #ifndef HANYA_PROGRAM_MUX_SWITCH
 // pin input ATC
 #ifdef CILEUNGSI
-#define PROX_UMB_MAJU PA0     // 0
-#define PROX_UMB_MUNDUR PA1   // 1
-#define PROX_CLAMP PA2        // 2
-#define PROX_UNCLAMP PA3      // 3
-#define PROX_TOOLS PA4        // 4
+#define PROX_UMB_MAJU PB12    // 0
+#define PROX_UMB_MUNDUR PB13  // 1
+#define PROX_TOOLS PB14       // 4
+#define PROX_UNCLAMP PB15     // 3
+#define PROX_CLAMP PA8        // 2
 #define SPINDLE_ORIENT_OK PA9 // 5
 // #define OIL_LEVEL PB3         // 6
 // #define INPUT_EMERGENCY PB4   // 7
@@ -60,11 +60,11 @@ const int input_pins[6] = {
 
 // pin output ATC
 #ifdef CILEUNGSI
-#define STEP_STEPPER PB4   // 0
-#define DIR_STEPPER PB5    // 1
-#define MOVE_UMB PB6       // 4
 #define TOOL_CLAMP PB7     // 3
-#define SPINDLE_ORIENT PB8 // 2
+#define MOVE_UMB PB4       // 4
+#define SPINDLE_ORIENT PB6 // 2
+#define STEP_STEPPER PA15  // 0
+#define DIR_STEPPER PB3    // 1
 // #define OIL_PUMP PA5     // 5
 // #define BUZZER PB0       // 6
 #else
